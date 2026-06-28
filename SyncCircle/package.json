@@ -1,0 +1,20 @@
+{
+  "name": "synccircle",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SyncCircle hackathon web app workspace with a React frontend and planned backend/API structure.",
+  "type": "module",
+  "scripts": {
+    "dev": "corepack pnpm --filter @synccircle/frontend dev",
+    "build": "corepack pnpm --filter @synccircle/frontend build",
+    "typecheck": "corepack pnpm --dir apps/frontend typecheck",
+    "test": "corepack pnpm --filter @synccircle/frontend test",
+    "lint": "corepack pnpm --filter @synccircle/frontend lint"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "pnpm": {
+    "overrides": {
+      "vite": "6.3.5"
+    }
+  }
+}

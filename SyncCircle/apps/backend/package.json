@@ -1,0 +1,11 @@
+{
+  "name": "@synccircle/backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"Backend stack not selected yet\"",
+    "build": "echo \"Backend stack not selected yet\"",
+    "test": "echo \"Backend tests not configured yet\""
+  }
+}
