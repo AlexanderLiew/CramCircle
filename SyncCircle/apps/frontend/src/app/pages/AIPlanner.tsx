@@ -159,7 +159,7 @@ export function AIPlanner() {
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold">AI Study Planner</h1>
+                <h1 className="text-xl font-bold">AI Planner</h1>
                 <p className="text-xs text-muted-foreground">
                   Your smart scheduling assistant
                 </p>
