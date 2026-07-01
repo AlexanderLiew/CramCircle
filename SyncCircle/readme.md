@@ -122,14 +122,58 @@ For full details see `.kiro/steering/workato-google-calendar.md`.
 
 | Area | Status |
 |---|---|
-| Frontend | ✅ Working React prototype |
+| Frontend | ✅ Working React app with real auth |
+| Auth (Cognito) | ✅ Real signup, login, email verification, JWT tokens |
+| Friends Backend | ✅ Full CRUD — search, send/accept/reject/cancel requests, list/remove friends |
+| DynamoDB | ✅ 3 tables deployed (UserProfiles, FriendRequests, Friendships) |
+| API Gateway | ✅ 11 endpoints with Cognito authorizer + CORS |
+| Relationship Query | ✅ `GET /friends/{userId}/relationship` for downstream features |
 | Timetable → Google Calendar | ✅ Workato integration working |
 | Task deadline → Email via SNS | ✅ Workato + AWS SNS integration working |
 | In-app notifications | ✅ Toast + bell panel working |
-| Backend | ⬜ Not connected — UI uses localStorage only |
-| Auth | ⬜ Demo only (`localStorage` flag) |
+| Invitation emails (SES) | ⚠️ In local-log mode (SES sandbox — needs verification for real emails) |
+| Timetable friend sync | ⬜ Ready to build — use relationship endpoint |
+| AI Planner friend feature | ⬜ Ready to build — use friends list endpoint |
 
 ## Team Notes
+
+### For Timetable Friend Sync Team
+
+The relationship API is live. To check if two users are friends before showing shared timetable:
+
+```typescript
+import { apiClient } from '../lib/api-client';
+import type { FriendshipAccessResult } from '@synccircle/shared';
+
+const result = await apiClient.get<FriendshipAccessResult>(`/friends/${targetUserId}/relationship`);
+if (result.isActiveFriend) {
+  // Allow timetable sharing
+}
+```
+
+### For AI Planner Friend Feature Team
+
+Get the current user's friends list:
+
+```typescript
+import { apiClient } from '../lib/api-client';
+import { API_PATHS, type FriendsListResponse } from '@synccircle/shared';
+
+const { friends } = await apiClient.get<FriendsListResponse>(API_PATHS.FRIENDS);
+// friends = [{ friendId, displayName, createdAt }]
+```
+
+### Shared Types
+
+All API types are in `packages/shared/` — import from `@synccircle/shared`:
+- `FriendsListResponse`, `FriendshipAccessResult`, `SearchResponse`
+- `API_PATHS` constants for all endpoint URLs
+- `ERROR_CODES` for error handling
+
+### Auth Integration
+
+The `useAuth()` hook provides: `user`, `isAuthenticated`, `login`, `register`, `logout`, `getToken`.
+The `apiClient` automatically attaches the JWT token to all requests.
 
 Use `docs/kiro-context.md` first when handing this to Kiro or a teammate. It explains
 what is real today, what is placeholder-only, and where future backend/API work should attach.

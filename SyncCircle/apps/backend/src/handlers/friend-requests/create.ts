@@ -113,7 +113,7 @@ export async function handler(
     const friendRequest: FriendRequest = {
       requestId,
       senderUserId: callerUserId,
-      receiverUserId: recipient?.userId ?? '',
+      receiverUserId: recipient?.userId ?? 'UNREGISTERED',
       receiverEmail: email as string,
       normalizedReceiverEmail: normalizedRecipientEmail,
       senderDisplayName: displayName as string,

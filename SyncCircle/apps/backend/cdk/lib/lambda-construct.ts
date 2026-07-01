@@ -71,6 +71,7 @@ export class LambdaConstruct extends Construct {
       FRIENDSHIPS_TABLE: friendshipsTable.tableName,
       SES_SENDER_EMAIL: sesSenderEmail,
       FRONTEND_BASE_URL: frontendBaseUrl,
+      EMAIL_ADAPTER: 'local',
     };
 
     // Default function configuration
