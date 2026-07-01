@@ -13,6 +13,9 @@ import {
   Clock,
   Flag,
   Trash2,
+  CalendarCheck,
+  Loader2,
+  XCircle,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import {
@@ -36,6 +39,9 @@ import { getClasses, saveClass, deleteClass } from "../lib/storage";
 import { getTasks, saveTask, deleteTask } from "../lib/storage";
 import { validateClassForm } from "../lib/validators";
 import { useWorkato } from "../hooks/useWorkato";
+import { postBulkSync } from "../lib/workato-client";
+import { sgtWeekStart, sgtWeekEnd, formatSGTDate, formatTime12h } from "../lib/sgt";
+import { toast } from "sonner";
 import type { TimetableClass, Task } from "../types";
 
 const timeSlots = [
@@ -181,7 +187,7 @@ function TaskItem({
           {task.dueDate && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="w-3 h-3" />
-              {new Date(task.dueDate).toLocaleDateString()}
+              {new Date(task.dueDate).toLocaleDateString('en-SG', { timeZone: 'Asia/Singapore' })}
             </span>
           )}
           <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${priorityBg[task.priority]} ${priorityColors[task.priority]}`}>
@@ -208,6 +214,8 @@ export function Timetable() {
   const [editingClass, setEditingClass] = useState<TimetableClass | null>(null);
   const [formData, setFormData] = useState<ClassFormData>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const { syncClass } = useWorkato();
 
   // Load data from localStorage on mount
@@ -215,6 +223,24 @@ export function Timetable() {
     setClasses(getClasses());
     setTasks(getTasks());
   }, []);
+
+  const handleSyncToGoogleCalendar = async () => {
+    if (classes.length === 0) {
+      toast.info("No classes to sync. Add some classes first.");
+      return;
+    }
+    setIsSyncing(true);
+    setSyncStatus('idle');
+    const success = await postBulkSync(classes);
+    setIsSyncing(false);
+    if (success) {
+      setSyncStatus('success');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    } else {
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
 
   const activeTasks = tasks.filter((t) => !t.completed);
   const completedTasks = tasks.filter((t) => t.completed);
@@ -340,6 +366,55 @@ export function Timetable() {
             <Filter className="w-4 h-4" />
             Filters
           </button>
+          <motion.button
+            onClick={handleSyncToGoogleCalendar}
+            disabled={isSyncing}
+            animate={{
+              backgroundColor:
+                syncStatus === 'success' ? '#16a34a' :
+                syncStatus === 'error'   ? '#dc2626' :
+                                           '#15803d',
+            }}
+            transition={{ duration: 0.3 }}
+            className="px-4 py-2 rounded-xl text-white disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
+          >
+            {isSyncing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Syncing…
+              </>
+            ) : syncStatus === 'success' ? (
+              <motion.span
+                key="success"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Synced!
+              </motion.span>
+            ) : syncStatus === 'error' ? (
+              <motion.span
+                key="error"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2"
+              >
+                <XCircle className="w-4 h-4" />
+                Sync Failed
+              </motion.span>
+            ) : (
+              <motion.span
+                key="idle"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2"
+              >
+                <CalendarCheck className="w-4 h-4" />
+                Sync to Google Calendar
+              </motion.span>
+            )}
+          </motion.button>
           <button
             onClick={openAddDialog}
             className="px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:shadow-lg transition-all flex items-center gap-2"
@@ -373,7 +448,10 @@ export function Timetable() {
               </button>
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-primary" />
-                <span className="font-medium">This Week</span>
+                <span className="font-medium">
+                  {formatSGTDate(sgtWeekStart())} – {formatSGTDate(sgtWeekEnd())}
+                </span>
+                <span className="text-xs text-muted-foreground">(SGT)</span>
               </div>
               <button className="p-2 rounded-lg hover:bg-accent transition-colors">
                 <ChevronRight className="w-5 h-5" />

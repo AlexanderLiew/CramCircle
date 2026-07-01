@@ -53,11 +53,13 @@ function addPendingSync(sync: Omit<PendingSync, 'id' | 'createdAt'>): void {
 
 /**
  * Fire-and-forget POST to the Workato webhook.
+ * The path is ignored for the single-endpoint Workato trial webhook —
+ * the event type is carried in the payload body instead.
  * Returns true on success, false on failure.
  */
-async function postWebhook(path: string, payload: unknown): Promise<boolean> {
+async function postWebhook(_path: string, payload: unknown): Promise<boolean> {
   try {
-    const res = await fetch(`${WORKATO_WEBHOOK_URL}${path}`, {
+    const res = await fetch(WORKATO_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
