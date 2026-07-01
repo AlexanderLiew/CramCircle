@@ -65,6 +65,30 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // ---------------------------------------------------------------------------
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // ─── Dev Bypass: skip Cognito entirely when VITE_DEV_BYPASS_AUTH=true ───
+  const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
+  if (DEV_BYPASS) {
+    const devUser: AuthUser = {
+      userId: 'dev-user-001',
+      email: 'dev@synccircle.test',
+      displayName: 'Dev User',
+      course: 'Computer Science',
+    };
+    const devValue: AuthContextValue = {
+      user: devUser,
+      isAuthenticated: true,
+      isLoading: false,
+      login: async () => {},
+      register: async () => {},
+      confirmRegistration: async () => {},
+      logout: () => {},
+      refreshSession: async () => {},
+      getToken: async () => 'dev-bypass-token',
+    };
+    return React.createElement(AuthContext.Provider, { value: devValue }, children);
+  }
+  // ─── End Dev Bypass ─────────────────────────────────────────────────────
+
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const poolRef = useRef<CognitoUserPool | null>(null);

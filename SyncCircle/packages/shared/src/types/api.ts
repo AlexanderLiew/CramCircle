@@ -42,6 +42,12 @@ export const API_PATHS = {
 
   /** GET — Query relationship status (append /{friendId}/relationship) */
   FRIENDS_RELATIONSHIP: '/friends/:friendId/relationship',
+
+  /** PUT — Save user's timetable classes */
+  TIMETABLE: '/timetable',
+
+  /** GET — Fetch a friend's timetable (append /{friendId}/timetable) */
+  FRIENDS_TIMETABLE: '/friends/:friendId/timetable',
 } as const;
 
 // ─── Auth Header Format ──────────────────────────────────────────────────────

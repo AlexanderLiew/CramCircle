@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiClient, UnauthorizedError } from '../lib/api-client';
 import { API_PATHS, type FriendsListResponse } from '@synccircle/shared';
 import { useAuth } from './useAuth';
+import { toast } from 'sonner';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -27,12 +28,24 @@ export interface UseFriendsReturn {
  * Does NOT use localStorage — all data comes from the backend.
  */
 export function useFriends(): UseFriendsReturn {
+  const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
   const [friends, setFriends] = useState<Friend[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!DEV_BYPASS);
   const [error, setError] = useState<string | null>(null);
   const { logout } = useAuth();
 
   const fetchFriends = useCallback(async () => {
+    // Dev bypass: return mock friends from seed data
+    if (DEV_BYPASS) {
+      setFriends([
+        { friendId: 'alice-001', displayName: 'Alice Tan', createdAt: '2026-06-25T10:00:00Z' },
+        { friendId: 'bob-002', displayName: 'Bob Lim', createdAt: '2026-06-26T14:30:00Z' },
+        { friendId: 'charlie-003', displayName: 'Charlie Wong', createdAt: '2026-06-28T09:15:00Z' },
+      ]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
@@ -54,11 +67,16 @@ export function useFriends(): UseFriendsReturn {
   }, [fetchFriends]);
 
   const removeFriend = useCallback(async (friendId: string) => {
+    if (DEV_BYPASS) {
+      setFriends((prev) => prev.filter((f) => f.friendId !== friendId));
+      toast.success('Friend removed (dev mode)');
+      return;
+    }
+
     setError(null);
     try {
       const path = API_PATHS.FRIENDS_REMOVE.replace(':friendId', friendId);
       await apiClient.del(path);
-      // Re-fetch to get updated list
       await fetchFriends();
     } catch (err) {
       if (err instanceof UnauthorizedError) {

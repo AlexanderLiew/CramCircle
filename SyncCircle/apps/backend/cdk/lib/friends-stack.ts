@@ -45,6 +45,7 @@ export class FriendsStack extends Stack {
       userProfilesTable: dynamodb.userProfilesTable,
       friendRequestsTable: dynamodb.friendRequestsTable,
       friendshipsTable: dynamodb.friendshipsTable,
+      userTimetablesTable: dynamodb.userTimetablesTable,
       sesSenderEmail: props.sesSenderEmail,
       frontendBaseUrl: props.frontendBaseUrl,
     });
@@ -70,6 +71,8 @@ export class FriendsStack extends Stack {
       listFriendsHandler: lambdas.listFriendsHandler,
       removeFriendHandler: lambdas.removeFriendHandler,
       relationshipHandler: lambdas.relationshipHandler,
+      putTimetableHandler: lambdas.putTimetableHandler,
+      getFriendTimetableHandler: lambdas.getFriendTimetableHandler,
     });
   }
 }

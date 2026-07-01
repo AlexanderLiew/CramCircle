@@ -44,13 +44,26 @@ export interface UseFriendRequestsReturn {
  * Does NOT use localStorage — all data comes from the backend.
  */
 export function useFriendRequests(): UseFriendRequestsReturn {
+  const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
   const [incoming, setIncoming] = useState<IncomingRequest[]>([]);
   const [outgoing, setOutgoing] = useState<OutgoingRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!DEV_BYPASS);
   const [error, setError] = useState<string | null>(null);
   const { logout } = useAuth();
 
   const fetchRequests = useCallback(async () => {
+    // Dev bypass: return mock data
+    if (DEV_BYPASS) {
+      setIncoming([
+        { requestId: 'req-1', senderDisplayName: 'David Chen', createdAt: '2026-07-01T08:00:00Z' },
+      ]);
+      setOutgoing([
+        { requestId: 'req-2', recipientEmail: 'eve@school.edu', status: 'pending', createdAt: '2026-06-30T16:00:00Z' },
+      ]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
@@ -76,13 +89,18 @@ export function useFriendRequests(): UseFriendRequestsReturn {
   }, [fetchRequests]);
 
   const sendRequest = useCallback(async (email: string, displayName: string): Promise<CreateFriendRequestResponse> => {
+    if (DEV_BYPASS) {
+      const mockResponse: CreateFriendRequestResponse = { requestId: `req-${Date.now()}`, status: 'pending' } as any;
+      setOutgoing((prev) => [...prev, { requestId: mockResponse.requestId, recipientEmail: email, status: 'pending', createdAt: new Date().toISOString() }]);
+      return mockResponse;
+    }
+
     setError(null);
     try {
       const response = await apiClient.post<CreateFriendRequestResponse>(API_PATHS.FRIEND_REQUESTS, {
         recipientEmail: email,
         recipientDisplayName: displayName,
       });
-      // Re-fetch to get updated lists
       await fetchRequests();
       return response;
     } catch (err) {
@@ -95,6 +113,11 @@ export function useFriendRequests(): UseFriendRequestsReturn {
   }, [fetchRequests, logout]);
 
   const acceptRequest = useCallback(async (requestId: string): Promise<AcceptRejectCancelResponse> => {
+    if (DEV_BYPASS) {
+      setIncoming((prev) => prev.filter((r) => r.requestId !== requestId));
+      return { message: 'Accepted (dev mode)' } as any;
+    }
+
     setError(null);
     try {
       const path = API_PATHS.FRIEND_REQUESTS_ACCEPT.replace(':requestId', requestId);
@@ -111,6 +134,11 @@ export function useFriendRequests(): UseFriendRequestsReturn {
   }, [fetchRequests, logout]);
 
   const rejectRequest = useCallback(async (requestId: string): Promise<AcceptRejectCancelResponse> => {
+    if (DEV_BYPASS) {
+      setIncoming((prev) => prev.filter((r) => r.requestId !== requestId));
+      return { message: 'Rejected (dev mode)' } as any;
+    }
+
     setError(null);
     try {
       const path = API_PATHS.FRIEND_REQUESTS_REJECT.replace(':requestId', requestId);
@@ -127,6 +155,11 @@ export function useFriendRequests(): UseFriendRequestsReturn {
   }, [fetchRequests, logout]);
 
   const cancelRequest = useCallback(async (requestId: string): Promise<AcceptRejectCancelResponse> => {
+    if (DEV_BYPASS) {
+      setOutgoing((prev) => prev.filter((r) => r.requestId !== requestId));
+      return { message: 'Cancelled (dev mode)' } as any;
+    }
+
     setError(null);
     try {
       const path = API_PATHS.FRIEND_REQUESTS_CANCEL.replace(':requestId', requestId);

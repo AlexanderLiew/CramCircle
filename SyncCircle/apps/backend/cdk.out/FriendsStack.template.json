@@ -212,6 +212,33 @@
     "aws:cdk:path": "FriendsStack/DynamoDb/FriendshipsTable/Resource"
    }
   },
+  "DynamoDbUserTimetablesTableF2615393": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "userId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "userId",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "TableName": "UserTimetables"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/DynamoDb/UserTimetablesTable/Resource"
+   }
+  },
   "SesSenderIdentity1B72E79E": {
    "Type": "AWS::SES::EmailIdentity",
    "Properties": {
@@ -357,7 +384,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "d3259905639fa97b12d016804a0e48b3ee3e0d254f7a5959104ad6a9d048bbe4.zip"
+     "S3Key": "b9189eb6131f52834b9d833960f1b773bfd561745c9bfbf2964cf68d4f1adf2d.zip"
     },
     "Environment": {
      "Variables": {
@@ -370,8 +397,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-Search",
@@ -392,7 +423,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/SearchHandler/Resource",
-    "aws:asset:path": "asset.d3259905639fa97b12d016804a0e48b3ee3e0d254f7a5959104ad6a9d048bbe4",
+    "aws:asset:path": "asset.b9189eb6131f52834b9d833960f1b773bfd561745c9bfbf2964cf68d4f1adf2d",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -572,7 +603,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "5bf32eb0f7678c9b6c6a4cd8e76da085c50e936e993cf9b6fba93d52d04dfab3.zip"
+     "S3Key": "f20c8dfcef2aafdbf1acc30ad482b641bcbd39f3d8d212b9496cce7ef76d5a1c.zip"
     },
     "Environment": {
      "Variables": {
@@ -585,8 +616,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-CreateRequest",
@@ -607,7 +642,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/CreateFriendRequestHandler/Resource",
-    "aws:asset:path": "asset.5bf32eb0f7678c9b6c6a4cd8e76da085c50e936e993cf9b6fba93d52d04dfab3",
+    "aws:asset:path": "asset.f20c8dfcef2aafdbf1acc30ad482b641bcbd39f3d8d212b9496cce7ef76d5a1c",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -751,7 +786,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "7a0341090918b4422e7ede5cd724c5c9fef55585a19fc7fa1b6286d5fa152265.zip"
+     "S3Key": "0473f2729e9911821f0606396ee2b45aaea0952298bf0dbb99a15bb68d4e8a7e.zip"
     },
     "Environment": {
      "Variables": {
@@ -764,8 +799,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-Accept",
@@ -786,7 +825,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/AcceptHandler/Resource",
-    "aws:asset:path": "asset.7a0341090918b4422e7ede5cd724c5c9fef55585a19fc7fa1b6286d5fa152265",
+    "aws:asset:path": "asset.0473f2729e9911821f0606396ee2b45aaea0952298bf0dbb99a15bb68d4e8a7e",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -904,7 +943,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "ad5025caae5c8e1666807c4b93ae76b59ceaf4f08c9b716a7ca13727762be66a.zip"
+     "S3Key": "c5024bb0c65baf188ea98f71a11cc5a65ab6bbb7ec17c07c8421452e909bc6c5.zip"
     },
     "Environment": {
      "Variables": {
@@ -917,8 +956,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-Reject",
@@ -939,7 +982,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/RejectHandler/Resource",
-    "aws:asset:path": "asset.ad5025caae5c8e1666807c4b93ae76b59ceaf4f08c9b716a7ca13727762be66a",
+    "aws:asset:path": "asset.c5024bb0c65baf188ea98f71a11cc5a65ab6bbb7ec17c07c8421452e909bc6c5",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -1057,7 +1100,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "742539fcfd30a59a212862c5aa1f9c294d6ab8f9e035963fea5d14dfd1e23ab1.zip"
+     "S3Key": "57b074667d1945b9fa3310fedbe7a56b3919d01c5c3d6d23154449234125258d.zip"
     },
     "Environment": {
      "Variables": {
@@ -1070,8 +1113,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-Cancel",
@@ -1092,7 +1139,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/CancelHandler/Resource",
-    "aws:asset:path": "asset.742539fcfd30a59a212862c5aa1f9c294d6ab8f9e035963fea5d14dfd1e23ab1",
+    "aws:asset:path": "asset.57b074667d1945b9fa3310fedbe7a56b3919d01c5c3d6d23154449234125258d",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -1233,7 +1280,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "10e8d97e2aacf6abe1fb790f1eeeb7f81edf760db5aaf1a639e335c51fb23bf5.zip"
+     "S3Key": "0843a81ff9c631965628b63e26c22c4cec9d761b0813ab672b48dadda240b75b.zip"
     },
     "Environment": {
      "Variables": {
@@ -1246,8 +1293,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-Incoming",
@@ -1268,7 +1319,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/IncomingHandler/Resource",
-    "aws:asset:path": "asset.10e8d97e2aacf6abe1fb790f1eeeb7f81edf760db5aaf1a639e335c51fb23bf5",
+    "aws:asset:path": "asset.0843a81ff9c631965628b63e26c22c4cec9d761b0813ab672b48dadda240b75b",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -1383,7 +1434,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "6dd2d014f1c6b244b809b7de472a45aa28e9349ff213d1345b6d8c60fea8c8d4.zip"
+     "S3Key": "ca72f44bba1cec6fa6caf9ac68105a2a24c5527c1c90aeeed29ade240f58a19b.zip"
     },
     "Environment": {
      "Variables": {
@@ -1396,8 +1447,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-Outgoing",
@@ -1418,7 +1473,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/OutgoingHandler/Resource",
-    "aws:asset:path": "asset.6dd2d014f1c6b244b809b7de472a45aa28e9349ff213d1345b6d8c60fea8c8d4",
+    "aws:asset:path": "asset.ca72f44bba1cec6fa6caf9ac68105a2a24c5527c1c90aeeed29ade240f58a19b",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -1559,7 +1614,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "f28fa1da82a50e4752c36301a4de8633171e257f2b9bc25332d3aa944a8c328a.zip"
+     "S3Key": "f4bc379572cdb3578448984a1e1e54190fe0e2baeea98ac22b94cacd88e86357.zip"
     },
     "Environment": {
      "Variables": {
@@ -1572,8 +1627,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-ValidateToken",
@@ -1594,7 +1653,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/ValidateTokenHandler/Resource",
-    "aws:asset:path": "asset.f28fa1da82a50e4752c36301a4de8633171e257f2b9bc25332d3aa944a8c328a",
+    "aws:asset:path": "asset.f4bc379572cdb3578448984a1e1e54190fe0e2baeea98ac22b94cacd88e86357",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -1735,7 +1794,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "a5227bdad3af55a594a1074ca94d3d92bf65f21ea4fa77a2502dc7ea33e6303c.zip"
+     "S3Key": "704409f6c14ad86b0c7bd09dde37cf5b3bc68d846fd5a63f6328b26f7d4c3b6a.zip"
     },
     "Environment": {
      "Variables": {
@@ -1748,8 +1807,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-List",
@@ -1770,7 +1833,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/ListFriendsHandler/Resource",
-    "aws:asset:path": "asset.a5227bdad3af55a594a1074ca94d3d92bf65f21ea4fa77a2502dc7ea33e6303c",
+    "aws:asset:path": "asset.704409f6c14ad86b0c7bd09dde37cf5b3bc68d846fd5a63f6328b26f7d4c3b6a",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -1888,7 +1951,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "afaa651b68046535611e52d749ef7572fc610d8e3b4b31af1232943f08d775b1.zip"
+     "S3Key": "83659b07a24b08624b571448b6f6e6746b6081b8d6028daa8e00607a86ec7265.zip"
     },
     "Environment": {
      "Variables": {
@@ -1901,8 +1964,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-Remove",
@@ -1923,7 +1990,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/RemoveFriendHandler/Resource",
-    "aws:asset:path": "asset.afaa651b68046535611e52d749ef7572fc610d8e3b4b31af1232943f08d775b1",
+    "aws:asset:path": "asset.83659b07a24b08624b571448b6f6e6746b6081b8d6028daa8e00607a86ec7265",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -2064,7 +2131,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "0d24bbb4a794f2a953d75736bf15346f48d9149f6f13fafaac9289f1cca5b65b.zip"
+     "S3Key": "6c19debb1a1e239739f41443e54edd7c87b08f7be05f2f3ee5ef43568ef843c4.zip"
     },
     "Environment": {
      "Variables": {
@@ -2077,8 +2144,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-Relationship",
@@ -2099,7 +2170,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/RelationshipHandler/Resource",
-    "aws:asset:path": "asset.0d24bbb4a794f2a953d75736bf15346f48d9149f6f13fafaac9289f1cca5b65b",
+    "aws:asset:path": "asset.6c19debb1a1e239739f41443e54edd7c87b08f7be05f2f3ee5ef43568ef843c4",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -2243,7 +2314,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
-     "S3Key": "804efb267ecde6ba7aa5d26244791badecad77b35d44453fbf11921b96abdd7f.zip"
+     "S3Key": "6c9459c61091e5b1d144003ea3b431013faf9ff0d7739cc5d7f47dadd427407b.zip"
     },
     "Environment": {
      "Variables": {
@@ -2256,8 +2327,12 @@
       "FRIENDSHIPS_TABLE": {
        "Ref": "DynamoDbFriendshipsTable71E5A0A1"
       },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
       "SES_SENDER_EMAIL": "noreply@synccircle.com",
-      "FRONTEND_BASE_URL": "http://localhost:5173"
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
      }
     },
     "FunctionName": "SyncCircle-Friends-PostConfirmation",
@@ -2278,7 +2353,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/PostConfirmationHandler/Resource",
-    "aws:asset:path": "asset.804efb267ecde6ba7aa5d26244791badecad77b35d44453fbf11921b96abdd7f",
+    "aws:asset:path": "asset.6c9459c61091e5b1d144003ea3b431013faf9ff0d7739cc5d7f47dadd427407b",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -2307,6 +2382,312 @@
    },
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Lambdas/PostConfirmationHandler/LogRetention/Resource"
+   }
+  },
+  "LambdasPutTimetableHandlerServiceRole80B867C2": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Lambdas/PutTimetableHandler/ServiceRole/Resource"
+   }
+  },
+  "LambdasPutTimetableHandlerServiceRoleDefaultPolicy2E0D1336": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "dynamodb:PutItem",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "DynamoDbUserTimetablesTableF2615393",
+          "Arn"
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "LambdasPutTimetableHandlerServiceRoleDefaultPolicy2E0D1336",
+    "Roles": [
+     {
+      "Ref": "LambdasPutTimetableHandlerServiceRole80B867C2"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Lambdas/PutTimetableHandler/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "LambdasPutTimetableHandler57A3D776": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
+     "S3Key": "b33ecf9e4c9d262fc8e11c6034ee024900e5003da96135c69083cf7aa98e29f3.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "USER_PROFILES_TABLE": {
+       "Ref": "DynamoDbUserProfilesTable56C9F6F1"
+      },
+      "FRIEND_REQUESTS_TABLE": {
+       "Ref": "DynamoDbFriendRequestsTableAE7598AF"
+      },
+      "FRIENDSHIPS_TABLE": {
+       "Ref": "DynamoDbFriendshipsTable71E5A0A1"
+      },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
+      "SES_SENDER_EMAIL": "noreply@synccircle.com",
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
+     }
+    },
+    "FunctionName": "SyncCircle-Timetable-Put",
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "LambdasPutTimetableHandlerServiceRole80B867C2",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Timeout": 30
+   },
+   "DependsOn": [
+    "LambdasPutTimetableHandlerServiceRoleDefaultPolicy2E0D1336",
+    "LambdasPutTimetableHandlerServiceRole80B867C2"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Lambdas/PutTimetableHandler/Resource",
+    "aws:asset:path": "asset.b33ecf9e4c9d262fc8e11c6034ee024900e5003da96135c69083cf7aa98e29f3",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "LambdasPutTimetableHandlerLogRetention1E14F101": {
+   "Type": "Custom::LogRetention",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A",
+      "Arn"
+     ]
+    },
+    "LogGroupName": {
+     "Fn::Join": [
+      "",
+      [
+       "/aws/lambda/",
+       {
+        "Ref": "LambdasPutTimetableHandler57A3D776"
+       }
+      ]
+     ]
+    },
+    "RetentionInDays": 14
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Lambdas/PutTimetableHandler/LogRetention/Resource"
+   }
+  },
+  "LambdasGetFriendTimetableHandlerServiceRoleA4AA974C": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Lambdas/GetFriendTimetableHandler/ServiceRole/Resource"
+   }
+  },
+  "LambdasGetFriendTimetableHandlerServiceRoleDefaultPolicyBCF3B91F": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "dynamodb:GetItem",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "DynamoDbUserTimetablesTableF2615393",
+          "Arn"
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "dynamodb:Query",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "DynamoDbFriendshipsTable71E5A0A1",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "DynamoDbFriendshipsTable71E5A0A1",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "LambdasGetFriendTimetableHandlerServiceRoleDefaultPolicyBCF3B91F",
+    "Roles": [
+     {
+      "Ref": "LambdasGetFriendTimetableHandlerServiceRoleA4AA974C"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Lambdas/GetFriendTimetableHandler/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "LambdasGetFriendTimetableHandlerEDF6F3CA": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-368082409177-ap-southeast-1",
+     "S3Key": "d3a140cf7b2c95c39f43fbb64bf516b888274d504a3472c27839dfef8c82c43b.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "USER_PROFILES_TABLE": {
+       "Ref": "DynamoDbUserProfilesTable56C9F6F1"
+      },
+      "FRIEND_REQUESTS_TABLE": {
+       "Ref": "DynamoDbFriendRequestsTableAE7598AF"
+      },
+      "FRIENDSHIPS_TABLE": {
+       "Ref": "DynamoDbFriendshipsTable71E5A0A1"
+      },
+      "USER_TIMETABLES_TABLE": {
+       "Ref": "DynamoDbUserTimetablesTableF2615393"
+      },
+      "SES_SENDER_EMAIL": "noreply@synccircle.com",
+      "FRONTEND_BASE_URL": "http://localhost:5173",
+      "EMAIL_ADAPTER": "local"
+     }
+    },
+    "FunctionName": "SyncCircle-Timetable-GetFriend",
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "LambdasGetFriendTimetableHandlerServiceRoleA4AA974C",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Timeout": 30
+   },
+   "DependsOn": [
+    "LambdasGetFriendTimetableHandlerServiceRoleDefaultPolicyBCF3B91F",
+    "LambdasGetFriendTimetableHandlerServiceRoleA4AA974C"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Lambdas/GetFriendTimetableHandler/Resource",
+    "aws:asset:path": "asset.d3a140cf7b2c95c39f43fbb64bf516b888274d504a3472c27839dfef8c82c43b",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "LambdasGetFriendTimetableHandlerLogRetentionE5BB119C": {
+   "Type": "Custom::LogRetention",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A",
+      "Arn"
+     ]
+    },
+    "LogGroupName": {
+     "Fn::Join": [
+      "",
+      [
+       "/aws/lambda/",
+       {
+        "Ref": "LambdasGetFriendTimetableHandlerEDF6F3CA"
+       }
+      ]
+     ]
+    },
+    "RetentionInDays": 14
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Lambdas/GetFriendTimetableHandler/LogRetention/Resource"
    }
   },
   "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB": {
@@ -2606,7 +2987,7 @@
     "aws:cdk:path": "FriendsStack/Api/FriendsApi/Account"
    }
   },
-  "ApiFriendsApiDeploymentA8F32162493057d844e1f7af730571944434a7fe": {
+  "ApiFriendsApiDeploymentA8F321622a6a3b44860b33011cfd6c654f3f4305": {
    "Type": "AWS::ApiGateway::Deployment",
    "Properties": {
     "Description": "REST API for the SyncCircle Friends Backend",
@@ -2649,6 +3030,9 @@
     "ApiFriendsApifriendsfriendIdrelationshipOPTIONSC0B7EDC4",
     "ApiFriendsApifriendsfriendIdrelationship638F7DB8",
     "ApiFriendsApifriendsfriendIdDDDD4129",
+    "ApiFriendsApifriendsfriendIdtimetableGETF3140387",
+    "ApiFriendsApifriendsfriendIdtimetableOPTIONSC83E5CC0",
+    "ApiFriendsApifriendsfriendIdtimetable205F8F2C",
     "ApiFriendsApifriendsGETDC0B6AE2",
     "ApiFriendsApifriendsOPTIONSD351AFB8",
     "ApiFriendsApifriends173BDCB9",
@@ -2656,6 +3040,9 @@
     "ApiFriendsApifriendssearchPOST0FEE2487",
     "ApiFriendsApifriendssearchC053DB02",
     "ApiFriendsApiOPTIONSBB1AD3D4",
+    "ApiFriendsApitimetableOPTIONSF1E270A7",
+    "ApiFriendsApitimetablePUT39DF82CF",
+    "ApiFriendsApitimetable02773215",
     "ApiFriendsApiDefault4XXF423441C",
     "ApiFriendsApiDefault5XXF0912E0C",
     "ApiFriendsApiSearchModelA95E27E5",
@@ -2679,7 +3066,7 @@
      "Format": "{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"resourcePath\":\"$context.resourcePath\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\"}"
     },
     "DeploymentId": {
-     "Ref": "ApiFriendsApiDeploymentA8F32162493057d844e1f7af730571944434a7fe"
+     "Ref": "ApiFriendsApiDeploymentA8F321622a6a3b44860b33011cfd6c654f3f4305"
     },
     "RestApiId": {
      "Ref": "ApiFriendsApi19C890F1"
@@ -3430,6 +3817,176 @@
    },
    "Metadata": {
     "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/friends/{friendId}/relationship/GET/Resource"
+   }
+  },
+  "ApiFriendsApifriendsfriendIdtimetable205F8F2C": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "ApiFriendsApifriendsfriendIdDDDD4129"
+    },
+    "PathPart": "timetable",
+    "RestApiId": {
+     "Ref": "ApiFriendsApi19C890F1"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/friends/{friendId}/timetable/Resource"
+   }
+  },
+  "ApiFriendsApifriendsfriendIdtimetableOPTIONSC83E5CC0": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'",
+        "method.response.header.Access-Control-Allow-Credentials": "'true'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true,
+       "method.response.header.Access-Control-Allow-Credentials": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "ApiFriendsApifriendsfriendIdtimetable205F8F2C"
+    },
+    "RestApiId": {
+     "Ref": "ApiFriendsApi19C890F1"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/friends/{friendId}/timetable/OPTIONS/Resource"
+   }
+  },
+  "ApiFriendsApifriendsfriendIdtimetableGETApiPermissionFriendsStackApiFriendsApi009D4584GETfriendsfriendIdtimetable52E5B88C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "LambdasGetFriendTimetableHandlerEDF6F3CA",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:ap-southeast-1:368082409177:",
+       {
+        "Ref": "ApiFriendsApi19C890F1"
+       },
+       "/",
+       {
+        "Ref": "ApiFriendsApiDeploymentStageprodE329F81B"
+       },
+       "/GET/friends/*/timetable"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/friends/{friendId}/timetable/GET/ApiPermission.FriendsStackApiFriendsApi009D4584.GET..friends.{friendId}.timetable"
+   }
+  },
+  "ApiFriendsApifriendsfriendIdtimetableGETApiPermissionTestFriendsStackApiFriendsApi009D4584GETfriendsfriendIdtimetable35D30A74": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "LambdasGetFriendTimetableHandlerEDF6F3CA",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:ap-southeast-1:368082409177:",
+       {
+        "Ref": "ApiFriendsApi19C890F1"
+       },
+       "/test-invoke-stage/GET/friends/*/timetable"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/friends/{friendId}/timetable/GET/ApiPermission.Test.FriendsStackApiFriendsApi009D4584.GET..friends.{friendId}.timetable"
+   }
+  },
+  "ApiFriendsApifriendsfriendIdtimetableGETF3140387": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer23B91BA2"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:ap-southeast-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "LambdasGetFriendTimetableHandlerEDF6F3CA",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "ApiFriendsApifriendsfriendIdtimetable205F8F2C"
+    },
+    "RestApiId": {
+     "Ref": "ApiFriendsApi19C890F1"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/friends/{friendId}/timetable/GET/Resource"
    }
   },
   "ApiFriendsApifriendrequests977032EF": {
@@ -4753,6 +5310,179 @@
     "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/friend-requests/{requestId}/cancel/POST/Resource"
    }
   },
+  "ApiFriendsApitimetable02773215": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "ApiFriendsApi19C890F1",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "timetable",
+    "RestApiId": {
+     "Ref": "ApiFriendsApi19C890F1"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/timetable/Resource"
+   }
+  },
+  "ApiFriendsApitimetableOPTIONSF1E270A7": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'",
+        "method.response.header.Access-Control-Allow-Credentials": "'true'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true,
+       "method.response.header.Access-Control-Allow-Credentials": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "ApiFriendsApitimetable02773215"
+    },
+    "RestApiId": {
+     "Ref": "ApiFriendsApi19C890F1"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/timetable/OPTIONS/Resource"
+   }
+  },
+  "ApiFriendsApitimetablePUTApiPermissionFriendsStackApiFriendsApi009D4584PUTtimetableE166631F": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "LambdasPutTimetableHandler57A3D776",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:ap-southeast-1:368082409177:",
+       {
+        "Ref": "ApiFriendsApi19C890F1"
+       },
+       "/",
+       {
+        "Ref": "ApiFriendsApiDeploymentStageprodE329F81B"
+       },
+       "/PUT/timetable"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/timetable/PUT/ApiPermission.FriendsStackApiFriendsApi009D4584.PUT..timetable"
+   }
+  },
+  "ApiFriendsApitimetablePUTApiPermissionTestFriendsStackApiFriendsApi009D4584PUTtimetable6D94290D": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "LambdasPutTimetableHandler57A3D776",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:ap-southeast-1:368082409177:",
+       {
+        "Ref": "ApiFriendsApi19C890F1"
+       },
+       "/test-invoke-stage/PUT/timetable"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/timetable/PUT/ApiPermission.Test.FriendsStackApiFriendsApi009D4584.PUT..timetable"
+   }
+  },
+  "ApiFriendsApitimetablePUT39DF82CF": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer23B91BA2"
+    },
+    "HttpMethod": "PUT",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:ap-southeast-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "LambdasPutTimetableHandler57A3D776",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "ApiFriendsApitimetable02773215"
+    },
+    "RestApiId": {
+     "Ref": "ApiFriendsApi19C890F1"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "FriendsStack/Api/FriendsApi/Default/timetable/PUT/Resource"
+   }
+  },
   "ApiFriendsApiUnauthorized2C1ED6F3": {
    "Type": "AWS::ApiGateway::GatewayResponse",
    "Properties": {
@@ -4953,7 +5683,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12S3W7bMAyFn6X3ipalxbDbNNuKAu0WuOtuA0ZiXCWy6JnUgkzQuw+W8tPsih957CMe2TM9+zTV0xvY88TY3cS7tU4vAmanYM+rZA8BOrJrnX7C2qNabEKBrBhZp68dOP9oMYiTwyheDbLy0K0trAJZ3LL+Xsq3GIw4CspBp1ND1bXUJXlnik+lrPh2BcworOdjUXyr76PZodwD49Fep8UmnF3Hl3HoHLOjkJWnlnV6orZBGbeioJ6ofRgo9uOjJ87KUBuckE6vjMOSyI/ymU+w8A6DvJfqJCvoXQuCezjo1CDLvHcl1wXnxlAMor5g7+nQHX3edS8CbbmMCg0yxcFgifqM8kZ2FI90Uo+HVH6oGzTIPQUu2v+jZ7JYslV4ZWhx6SHUTOem3sYpJM+jvNHg/uJQkly6Bn9HZPkF3lkQGuo617OcL9uWzzjmc6G9Wn2xCT+i9FGyGn8XveUPf2Z3+uNnPb3ZsnOTIQZxHeqm1n9v0OP1ugIAAA=="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12S3W7bMAyFn2X3itqlRe/TbCsGtF3grrsNGJlxlciiZ1INUkHvPkjKT7MrfuSxj3lkTfX07lpff4EdT0y7nTi70vFFwGwV7HgZ272HntqVjr9h5VDN175AUoys4/cerPvZohcr+yxeDJJy0K9aWHpqccP6uZQfwRux5JWFXseGqmupC3LWFJ9KSfHNEphRWM9yUXyj74PZotwD48Fex/nan1zzyzj2ltmST8pRxzo+Uteg5K3Iq0fqHkYKQ370yEkZ6rwV0vGVcVwQuSyf+AhzZ9HLZ6lOkoLBdiC4g72ODbLMBltynXFmDAUv6hsOjvb9wedT9yLQlcOo0CBTGA2WqE8ob9Rm8UBH9fCRyg91gwZ5IM9F+3/0RC2WbBVeGTpcOPA106mpp3EMybMgbzTaDxxLknPX4N+ALH/A2RaExrrO5Syl87blN+Z81ncXq8/X/leQIUhS+broDV+9T2/113w7N2ztZAxebI+6qfUf0ezuJ7oCAAA="
    },
    "Metadata": {
     "aws:cdk:path": "FriendsStack/CDKMetadata/Default"

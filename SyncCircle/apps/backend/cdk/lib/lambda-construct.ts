@@ -23,6 +23,8 @@ export interface LambdaConstructProps {
   friendRequestsTable: dynamodb.ITable;
   /** DynamoDB Friendships table */
   friendshipsTable: dynamodb.ITable;
+  /** DynamoDB UserTimetables table */
+  userTimetablesTable: dynamodb.ITable;
   /** Verified SES sender email address */
   sesSenderEmail: string;
   /** Frontend base URL for invitation links */
@@ -48,6 +50,8 @@ export class LambdaConstruct extends Construct {
   public readonly removeFriendHandler: nodejs.NodejsFunction;
   public readonly relationshipHandler: nodejs.NodejsFunction;
   public readonly postConfirmationHandler: nodejs.NodejsFunction;
+  public readonly putTimetableHandler: nodejs.NodejsFunction;
+  public readonly getFriendTimetableHandler: nodejs.NodejsFunction;
 
   constructor(scope: Construct, id: string, props: LambdaConstructProps) {
     super(scope, id);
@@ -56,6 +60,7 @@ export class LambdaConstruct extends Construct {
       userProfilesTable,
       friendRequestsTable,
       friendshipsTable,
+      userTimetablesTable,
       sesSenderEmail,
       frontendBaseUrl,
     } = props;
@@ -69,6 +74,7 @@ export class LambdaConstruct extends Construct {
       USER_PROFILES_TABLE: userProfilesTable.tableName,
       FRIEND_REQUESTS_TABLE: friendRequestsTable.tableName,
       FRIENDSHIPS_TABLE: friendshipsTable.tableName,
+      USER_TIMETABLES_TABLE: userTimetablesTable.tableName,
       SES_SENDER_EMAIL: sesSenderEmail,
       FRONTEND_BASE_URL: frontendBaseUrl,
       EMAIL_ADAPTER: 'local',
@@ -80,12 +86,14 @@ export class LambdaConstruct extends Construct {
       timeout: Duration.seconds(30),
       memorySize: 256,
       logRetention: logs.RetentionDays.TWO_WEEKS,
+      depsLockFilePath: path.join(__dirname, '..', '..', 'package-lock.json'),
       bundling: {
         minify: true,
         sourceMap: true,
         target: 'node20',
         format: nodejs.OutputFormat.ESM,
         mainFields: ['module', 'main'],
+        forceDockerBundling: false,
       },
     };
 
@@ -278,5 +286,34 @@ export class LambdaConstruct extends Construct {
 
     userProfilesTable.grant(this.postConfirmationHandler, 'dynamodb:PutItem');
     friendRequestsTable.grant(this.postConfirmationHandler, 'dynamodb:Query', 'dynamodb:UpdateItem');
+
+    // -------------------------------------------------------------------
+    // Put Timetable Handler
+    // Needs: UserTimetables (PutItem)
+    // -------------------------------------------------------------------
+    this.putTimetableHandler = new nodejs.NodejsFunction(this, 'PutTimetableHandler', {
+      ...defaultFunctionProps,
+      entry: path.join(handlersDir, 'timetable', 'put.ts'),
+      handler: 'handler',
+      functionName: 'SyncCircle-Timetable-Put',
+      environment: commonEnv,
+    });
+
+    userTimetablesTable.grant(this.putTimetableHandler, 'dynamodb:PutItem');
+
+    // -------------------------------------------------------------------
+    // Get Friend Timetable Handler
+    // Needs: UserTimetables (GetItem), Friendships (Query)
+    // -------------------------------------------------------------------
+    this.getFriendTimetableHandler = new nodejs.NodejsFunction(this, 'GetFriendTimetableHandler', {
+      ...defaultFunctionProps,
+      entry: path.join(handlersDir, 'timetable', 'get-friend.ts'),
+      handler: 'handler',
+      functionName: 'SyncCircle-Timetable-GetFriend',
+      environment: commonEnv,
+    });
+
+    userTimetablesTable.grant(this.getFriendTimetableHandler, 'dynamodb:GetItem');
+    friendshipsTable.grant(this.getFriendTimetableHandler, 'dynamodb:Query');
   }
 }

@@ -47,11 +47,11 @@
  */
 
 // ─── User Profile ────────────────────────────────────────────────────────────
-export type { UserProfile } from './types/user-profile.js';
+export type { UserProfile } from './types/user-profile';
 
 // ─── Friend Request ──────────────────────────────────────────────────────────
-export type { FriendRequest, FriendRequestStatus } from './types/friend-request.js';
-export { FRIEND_REQUEST_STATUS } from './types/friend-request.js';
+export type { FriendRequest, FriendRequestStatus } from './types/friend-request';
+export { FRIEND_REQUEST_STATUS } from './types/friend-request';
 
 // ─── Friendship ──────────────────────────────────────────────────────────────
 export type {
@@ -59,8 +59,8 @@ export type {
   FriendshipStatus,
   FriendshipAccessResult,
   RelationshipStatus,
-} from './types/friendship.js';
-export { FRIENDSHIP_STATUS } from './types/friendship.js';
+} from './types/friendship';
+export { FRIENDSHIP_STATUS } from './types/friendship';
 
 // ─── API Contracts ───────────────────────────────────────────────────────────
 export {
@@ -68,7 +68,7 @@ export {
   AUTH_HEADER,
   AUTH_SCHEME,
   ERROR_CODES,
-} from './types/api.js';
+} from './types/api';
 
 export type {
   ErrorCode,
@@ -83,4 +83,4 @@ export type {
   TokenValidationResponse,
   FriendsListResponse,
   ErrorResponse,
-} from './types/api.js';
+} from './types/api';

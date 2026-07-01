@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Users,
   Filter,
   Plus,
   MapPin,
@@ -17,6 +16,10 @@ import {
   Loader2,
   XCircle,
   AlertCircle,
+  Upload,
+  Link2,
+  Unlink,
+  Download,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import {
@@ -36,15 +39,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { getClasses, saveClass, deleteClass } from "../lib/storage";
+import { Checkbox } from "../components/ui/checkbox";
+import { Popover, PopoverTrigger, PopoverContent } from "../components/ui/popover";
+import { getClasses, saveClass, deleteClass, getFriends } from "../lib/storage";
 import { getTasks, saveTask, deleteTask } from "../lib/storage";
 import { validateClassForm } from "../lib/validators";
-import { useWorkato } from "../hooks/useWorkato";
+import { useGoogleCalendar } from "../hooks/useGoogleCalendar";
 import { fireDeadlineEmailIfTomorrow } from "../hooks/useTaskNotifications";
-import { postBulkSync } from "../lib/workato-client";
-import { sgtWeekStart, sgtWeekEnd, formatSGTDate, formatTime12h } from "../lib/sgt";
+import { parseICSFromFile } from "../lib/ics-parser";
+import { apiClient } from "../lib/api-client";
+import { formatSGTDate, sgtWeekStartWithOffset, sgtWeekEndWithOffset } from "../lib/sgt";
 import { toast } from "sonner";
-import type { TimetableClass, Task } from "../types";
+import type { TimetableClass, Task, Friend } from "../types";
 
 const timeSlots = [
   "08:00", "09:00", "10:00", "11:00", "12:00",
@@ -249,9 +255,33 @@ export function Timetable() {
   const [editingClass, setEditingClass] = useState<TimetableClass | null>(null);
   const [formData, setFormData] = useState<ClassFormData>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const { syncClass } = useWorkato();
+
+  // Google Calendar
+  const {
+    isConnected: isGoogleConnected,
+    isInitialized: isGoogleInitialized,
+    isLoading: isGoogleLoading,
+    syncStatus,
+    connect: connectGoogle,
+    disconnect: disconnectGoogle,
+    syncToGoogle,
+    importFromGoogle,
+  } = useGoogleCalendar();
+
+  // Friends & Filter
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<Set<string>>(new Set());
+  const [showMyClasses, setShowMyClasses] = useState(true);
+
+  // ICS import
+  const icsInputRef = useRef<HTMLInputElement>(null);
+
+  // Week navigation (for Pull from Google)
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  // Compute week range labels
+  const getWeekStartWithOffset = (offset: number) => sgtWeekStartWithOffset(offset);
+  const getWeekEndWithOffset = (offset: number) => sgtWeekEndWithOffset(offset);
 
   // Task form state
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -265,6 +295,16 @@ export function Timetable() {
   useEffect(() => {
     setClasses(getClasses());
     setTasks(getTasks());
+    setFriends(getFriends());
+  }, []);
+
+  // Sync timetable to backend (fire-and-forget, best effort)
+  const syncTimetableToBackend = useCallback((updatedClasses: TimetableClass[]) => {
+    const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
+    if (DEV_BYPASS) return; // skip in dev mode
+    apiClient.put('/timetable', { classes: updatedClasses }).catch(() => {
+      // Silent fail — localStorage is the primary store, backend is secondary
+    });
   }, []);
 
   const handleSyncToGoogleCalendar = async () => {
@@ -272,18 +312,78 @@ export function Timetable() {
       toast.info("No classes to sync. Add some classes first.");
       return;
     }
-    setIsSyncing(true);
-    setSyncStatus('idle');
-    const success = await postBulkSync(classes);
-    setIsSyncing(false);
-    if (success) {
-      setSyncStatus('success');
-      setTimeout(() => setSyncStatus('idle'), 3000);
-    } else {
-      setSyncStatus('error');
-      setTimeout(() => setSyncStatus('idle'), 3000);
+    await syncToGoogle(classes);
+  };
+
+  const handleImportFromGoogle = async () => {
+    const imported = await importFromGoogle(weekOffset);
+    if (imported.length > 0) {
+      imported.forEach((cls) => saveClass(cls));
+      const updatedClasses = getClasses();
+      setClasses(updatedClasses);
+      syncTimetableToBackend(updatedClasses);
+      toast.success(`Imported ${imported.length} events from Google Calendar`);
     }
   };
+
+  const handleICSImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const imported = await parseICSFromFile(file);
+      if (imported.length === 0) {
+        toast.info("No classes found in the .ics file (weekday events only).");
+        return;
+      }
+      imported.forEach((cls) => saveClass(cls));
+      const updatedClasses = getClasses();
+      setClasses(updatedClasses);
+      syncTimetableToBackend(updatedClasses);
+      toast.success(`Imported ${imported.length} class(es) from ${file.name}`);
+    } catch {
+      toast.error("Failed to parse .ics file. Please check the file format.");
+    }
+    // Reset input so same file can be re-imported
+    if (icsInputRef.current) icsInputRef.current.value = '';
+  };
+
+  const handleToggleFriend = useCallback((friendId: string) => {
+    setSelectedFriendIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(friendId)) {
+        next.delete(friendId);
+      } else {
+        next.add(friendId);
+        // Fetch friend's timetable from API (if not in dev bypass)
+        const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true';
+        if (!DEV_BYPASS) {
+          apiClient.get<{ classes: TimetableClass[]; updatedAt: string | null }>(
+            `/friends/${friendId}/timetable`
+          ).then((data) => {
+            if (data.classes.length > 0) {
+              // Update the friend's timetable in local state
+              setFriends((prevFriends) =>
+                prevFriends.map((f) =>
+                  f.id === friendId || f.friendId === friendId
+                    ? { ...f, timetable: data.classes }
+                    : f
+                )
+              );
+            }
+          }).catch(() => {
+            // Silent fail — use whatever timetable data we already have (seed/localStorage)
+          });
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  // Friend overlay colors
+  const FRIEND_COLORS = [
+    '#3b82f6', '#f59e0b', '#10b981', '#ef4444',
+    '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
+  ];
 
   const activeTasks = tasks.filter((t) => !t.completed);
   const completedTasks = tasks.filter((t) => t.completed);
@@ -352,8 +452,13 @@ export function Timetable() {
     };
 
     saveClass(cls);
-    setClasses(getClasses());
-    syncClass(editingClass ? 'update' : 'create', cls);
+    const updatedClasses = getClasses();
+    setClasses(updatedClasses);
+    syncTimetableToBackend(updatedClasses);
+    // Auto-sync to Google Calendar if connected
+    if (isGoogleConnected) {
+      syncToGoogle([cls]);
+    }
     setDialogOpen(false);
     setEditingClass(null);
     setFormData(EMPTY_FORM);
@@ -363,8 +468,9 @@ export function Timetable() {
   const handleDeleteClass = () => {
     if (editingClass) {
       deleteClass(editingClass.id);
-      setClasses(getClasses());
-      syncClass('delete', editingClass);
+      const updatedClasses = getClasses();
+      setClasses(updatedClasses);
+      syncTimetableToBackend(updatedClasses);
       setDialogOpen(false);
       setEditingClass(null);
       setFormData(EMPTY_FORM);
@@ -442,67 +548,169 @@ export function Timetable() {
 
         {/* Calendar-only buttons — hidden when Tasks tab is active */}
         {activeTab === 'calendar' && (
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 rounded-xl bg-card border border-border hover:bg-accent transition-all flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Friend Availability
-            </button>
-            <button className="px-4 py-2 rounded-xl bg-card border border-border hover:bg-accent transition-all flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
-            <motion.button
-              onClick={handleSyncToGoogleCalendar}
-              disabled={isSyncing}
-              animate={{
-                backgroundColor:
-                  syncStatus === 'success' ? '#16a34a' :
-                  syncStatus === 'error'   ? '#dc2626' :
-                                             '#15803d',
-              }}
-              transition={{ duration: 0.3 }}
-              className="px-4 py-2 rounded-xl text-white disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Google Calendar Connect/Disconnect */}
+            {isGoogleConnected ? (
+              <button
+                onClick={disconnectGoogle}
+                className="px-3 py-2 rounded-xl bg-red-500/10 text-red-600 border border-red-200 hover:bg-red-500/20 transition-all flex items-center gap-2 text-sm"
+              >
+                <Unlink className="w-4 h-4" />
+                Disconnect Google
+              </button>
+            ) : (
+              <button
+                onClick={connectGoogle}
+                disabled={isGoogleLoading || !isGoogleInitialized}
+                className="px-3 py-2 rounded-xl bg-blue-500/10 text-blue-600 border border-blue-200 hover:bg-blue-500/20 disabled:opacity-50 transition-all flex items-center gap-2 text-sm"
+              >
+                <Link2 className="w-4 h-4" />
+                {isGoogleLoading ? 'Connecting…' : 'Connect Google Calendar'}
+              </button>
+            )}
+
+            {/* Import .ics */}
+            <input
+              ref={icsInputRef}
+              type="file"
+              accept=".ics,.ical"
+              className="hidden"
+              onChange={handleICSImport}
+            />
+            <button
+              onClick={() => icsInputRef.current?.click()}
+              className="px-3 py-2 rounded-xl bg-card border border-border hover:bg-accent transition-all flex items-center gap-2 text-sm"
             >
-              {isSyncing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Syncing…
-                </>
-              ) : syncStatus === 'success' ? (
-                <motion.span
-                  key="success"
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Synced!
-                </motion.span>
-              ) : syncStatus === 'error' ? (
-                <motion.span
-                  key="error"
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2"
-                >
-                  <XCircle className="w-4 h-4" />
-                  Sync Failed
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="idle"
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2"
-                >
-                  <CalendarCheck className="w-4 h-4" />
-                  Sync to Google Calendar
-                </motion.span>
-              )}
-            </motion.button>
+              <Upload className="w-4 h-4" />
+              Import .ics
+            </button>
+
+            {/* Import from Google */}
+            {isGoogleConnected && (
+              <button
+                onClick={handleImportFromGoogle}
+                className="px-3 py-2 rounded-xl bg-card border border-border hover:bg-accent transition-all flex items-center gap-2 text-sm"
+              >
+                <Download className="w-4 h-4" />
+                Pull from Google
+              </button>
+            )}
+
+            {/* Filter Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="px-3 py-2 rounded-xl bg-card border border-border hover:bg-accent transition-all flex items-center gap-2 text-sm">
+                  <Filter className="w-4 h-4" />
+                  Filter View
+                  {selectedFriendIds.size > 0 && (
+                    <span className="ml-1 text-xs bg-primary text-primary-foreground rounded-full px-1.5 py-0.5">
+                      {selectedFriendIds.size}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-64">
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Show Timetables</h4>
+                  {/* My timetable toggle */}
+                  <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 cursor-pointer transition-colors">
+                    <Checkbox
+                      checked={showMyClasses}
+                      onCheckedChange={(checked) => setShowMyClasses(!!checked)}
+                    />
+                    <div className="w-3 h-3 rounded-full bg-primary flex-shrink-0" />
+                    <span className="text-sm font-medium">My Classes</span>
+                  </label>
+                  {/* Friends */}
+                  {friends.length > 0 && (
+                    <div className="border-t border-border pt-2">
+                      <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">Friends</p>
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {friends.map((friend, idx) => (
+                          <label
+                            key={friend.id}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                          >
+                            <Checkbox
+                              checked={selectedFriendIds.has(friend.id)}
+                              onCheckedChange={() => handleToggleFriend(friend.id)}
+                            />
+                            <div
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: FRIEND_COLORS[idx % FRIEND_COLORS.length] }}
+                            />
+                            <span className="text-sm truncate">{friend.displayName}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {friend.timetable.length} classes
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {friends.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Add friends to compare timetables.</p>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Sync to Google Calendar */}
+            {isGoogleConnected && (
+              <motion.button
+                onClick={handleSyncToGoogleCalendar}
+                disabled={syncStatus === 'syncing'}
+                animate={{
+                  backgroundColor:
+                    syncStatus === 'success' ? '#16a34a' :
+                    syncStatus === 'error'   ? '#dc2626' :
+                                               '#15803d',
+                }}
+                transition={{ duration: 0.3 }}
+                className="px-3 py-2 rounded-xl text-white disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
+              >
+                {syncStatus === 'syncing' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Syncing…
+                  </>
+                ) : syncStatus === 'success' ? (
+                  <motion.span
+                    key="success"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Synced!
+                  </motion.span>
+                ) : syncStatus === 'error' ? (
+                  <motion.span
+                    key="error"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Sync Failed
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="idle"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2"
+                  >
+                    <CalendarCheck className="w-4 h-4" />
+                    Sync to Google
+                  </motion.span>
+                )}
+              </motion.button>
+            )}
+
             <button
               onClick={openAddDialog}
-              className="px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:shadow-lg transition-all flex items-center gap-2"
+              className="px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:shadow-lg transition-all flex items-center gap-2 text-sm"
             >
               <Plus className="w-4 h-4" />
               Add Class
@@ -529,19 +737,35 @@ export function Timetable() {
           {/* Week Navigation */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <button className="p-2 rounded-lg hover:bg-accent transition-colors">
+              <button
+                onClick={() => setWeekOffset((w) => w - 1)}
+                className="p-2 rounded-lg hover:bg-accent transition-colors"
+                aria-label="Previous week"
+              >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-primary" />
                 <span className="font-medium">
-                  {formatSGTDate(sgtWeekStart())} – {formatSGTDate(sgtWeekEnd())}
+                  {formatSGTDate(getWeekStartWithOffset(weekOffset))} – {formatSGTDate(getWeekEndWithOffset(weekOffset))}
                 </span>
                 <span className="text-xs text-muted-foreground">(SGT)</span>
               </div>
-              <button className="p-2 rounded-lg hover:bg-accent transition-colors">
+              <button
+                onClick={() => setWeekOffset((w) => w + 1)}
+                className="p-2 rounded-lg hover:bg-accent transition-colors"
+                aria-label="Next week"
+              >
                 <ChevronRight className="w-5 h-5" />
               </button>
+              {weekOffset !== 0 && (
+                <button
+                  onClick={() => setWeekOffset(0)}
+                  className="px-3 py-1 rounded-lg text-xs bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  Today
+                </button>
+              )}
             </div>
           </div>
 
@@ -568,9 +792,39 @@ export function Timetable() {
                     {timeLabels[timeIndex]}
                   </div>
                   {days.map((_, dayIndex) => {
-                    const classInSlot = classes.find(
-                      (c) => c.dayOfWeek === dayIndex && timeToRow(c.startTime) === timeIndex
-                    );
+                    // User's class in this slot
+                    const classInSlot = showMyClasses
+                      ? classes.find(
+                          (c) => c.dayOfWeek === dayIndex && timeToRow(c.startTime) === timeIndex
+                        )
+                      : undefined;
+
+                    // Friend classes in this slot
+                    const friendClassesInSlot: { cls: TimetableClass; color: string; friendName: string }[] = [];
+                    friends.forEach((friend, fIdx) => {
+                      if (!selectedFriendIds.has(friend.id)) return;
+                      const fc = friend.timetable.find(
+                        (c) => c.dayOfWeek === dayIndex && timeToRow(c.startTime) === timeIndex
+                      );
+                      if (fc) {
+                        friendClassesInSlot.push({
+                          cls: fc,
+                          color: FRIEND_COLORS[fIdx % FRIEND_COLORS.length],
+                          friendName: friend.displayName,
+                        });
+                      }
+                    });
+
+                    // Check if this is a common free slot (user + all selected friends are free)
+                    const isCommonFree =
+                      selectedFriendIds.size > 0 &&
+                      showMyClasses &&
+                      !classInSlot &&
+                      friendClassesInSlot.length === 0 &&
+                      !classes.some(
+                        (c) => c.dayOfWeek === dayIndex && timeToRow(c.startTime) === timeIndex
+                      );
+
                     return (
                       <div key={`${dayIndex}-${timeIndex}`} className="relative">
                         {classInSlot ? (
@@ -578,8 +832,37 @@ export function Timetable() {
                             classItem={classInSlot}
                             onClick={() => openEditDialog(classInSlot)}
                           />
+                        ) : friendClassesInSlot.length > 0 ? (
+                          <div className="space-y-1">
+                            {friendClassesInSlot.map(({ cls, color, friendName }) => (
+                              <motion.div
+                                key={cls.id}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="p-2 rounded-xl shadow-sm h-full border-2"
+                                style={{ borderColor: color, backgroundColor: `${color}15` }}
+                              >
+                                <h4 className="font-medium text-xs leading-tight" style={{ color }}>
+                                  {cls.title}
+                                </h4>
+                                <div className="text-[10px] opacity-70 mt-0.5">{friendName}</div>
+                                {cls.location && (
+                                  <div className="flex items-center gap-1 text-[10px] opacity-70 mt-0.5">
+                                    <MapPin className="w-2.5 h-2.5" />
+                                    {cls.location}
+                                  </div>
+                                )}
+                              </motion.div>
+                            ))}
+                          </div>
                         ) : (
-                          <div className="border border-border/30 rounded-lg transition-colors min-h-[52px] hover:bg-accent/30" />
+                          <div
+                            className={`border border-border/30 rounded-lg transition-colors min-h-[52px] ${
+                              isCommonFree
+                                ? 'bg-green-500/10 border-green-300/50'
+                                : 'hover:bg-accent/30'
+                            }`}
+                          />
                         )}
                       </div>
                     );
@@ -616,6 +899,43 @@ export function Timetable() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Friend overlay legend */}
+              {selectedFriendIds.size > 0 && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <h4 className="text-sm font-medium mb-2 text-muted-foreground">Friend Overlays</h4>
+                  <div className="flex flex-wrap gap-3">
+                    {friends
+                      .filter((f) => selectedFriendIds.has(f.id))
+                      .map((friend, idx) => {
+                        const originalIdx = friends.indexOf(friend);
+                        return (
+                          <div key={friend.id} className="flex items-center gap-2">
+                            <div
+                              className="w-4 h-4 rounded border-2"
+                              style={{ borderColor: FRIEND_COLORS[originalIdx % FRIEND_COLORS.length], backgroundColor: `${FRIEND_COLORS[originalIdx % FRIEND_COLORS.length]}20` }}
+                            />
+                            <span className="text-sm">{friend.displayName}</span>
+                          </div>
+                        );
+                      })}
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded bg-green-500/20 border border-green-300" />
+                      <span className="text-sm text-muted-foreground">Common free slots</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Google Calendar status */}
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="flex items-center gap-2 text-sm">
+                  <div className={`w-2 h-2 rounded-full ${isGoogleConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <span className="text-muted-foreground">
+                    Google Calendar: {isGoogleConnected ? 'Connected — changes auto-sync' : 'Not connected'}
+                  </span>
+                </div>
               </div>
             </motion.div>
           )}

@@ -18,6 +18,7 @@ export class DynamoDbConstruct extends Construct {
   public readonly userProfilesTable: Table;
   public readonly friendRequestsTable: Table;
   public readonly friendshipsTable: Table;
+  public readonly userTimetablesTable: Table;
 
   constructor(scope: Construct, id: string) {
     super(scope, id);
@@ -91,6 +92,15 @@ export class DynamoDbConstruct extends Construct {
       indexName: 'userIdHigh-index',
       partitionKey: { name: 'userIdHigh', type: AttributeType.STRING },
       projectionType: ProjectionType.ALL,
+    });
+
+    // ─── UserTimetables Table ─────────────────────────────────────────────
+    this.userTimetablesTable = new Table(this, 'UserTimetablesTable', {
+      tableName: 'UserTimetables',
+      partitionKey: { name: 'userId', type: AttributeType.STRING },
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
+      removalPolicy: RemovalPolicy.RETAIN,
     });
   }
 }

@@ -76,6 +76,37 @@ export function sgtWeekEnd(): string {
 }
 
 /**
+ * Returns the Monday of a week offset from current SGT week as "YYYY-MM-DD".
+ * weekOffset: 0 = this week, -1 = last week, +1 = next week
+ */
+export function sgtWeekStartWithOffset(weekOffset: number): string {
+  const { year, month, day, dow } = todaySGT();
+  const diff = 0 - dow + (weekOffset * 7); // 0 = Monday
+  const baseMs = Date.UTC(year, month - 1, day);
+  const targetMs = baseMs + diff * 24 * 60 * 60 * 1000;
+  const t = new Date(targetMs);
+  const yyyy = t.getUTCFullYear();
+  const mm = String(t.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(t.getUTCDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * Returns the Friday of a week offset from current SGT week as "YYYY-MM-DD".
+ */
+export function sgtWeekEndWithOffset(weekOffset: number): string {
+  const { year, month, day, dow } = todaySGT();
+  const diff = 4 - dow + (weekOffset * 7); // 4 = Friday
+  const baseMs = Date.UTC(year, month - 1, day);
+  const targetMs = baseMs + diff * 24 * 60 * 60 * 1000;
+  const t = new Date(targetMs);
+  const yyyy = t.getUTCFullYear();
+  const mm = String(t.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(t.getUTCDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
  * Formats an SGT date string "YYYY-MM-DD" to a human-readable label.
  * e.g. "2026-07-01" → "1 Jul"
  */

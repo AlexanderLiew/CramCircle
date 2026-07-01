@@ -143,6 +143,37 @@ export function removeFriend(id: string): void {
   removeById<Friend>(STORAGE_KEYS.FRIENDS, id);
 }
 
+/**
+ * Update a friend's shared timetable data.
+ * Used when a friend shares their timetable (via .ics import or manual entry).
+ */
+export function updateFriendTimetable(friendId: string, timetable: TimetableClass[]): void {
+  const friends = getFriends();
+  const friend = friends.find((f) => f.id === friendId);
+  if (friend) {
+    friend.timetable = timetable;
+    writeArray(STORAGE_KEYS.FRIENDS, friends);
+  }
+}
+
+/**
+ * Get a friend's shared timetable.
+ */
+export function getFriendTimetable(friendId: string): TimetableClass[] {
+  const friends = getFriends();
+  const friend = friends.find((f) => f.id === friendId);
+  return friend?.timetable ?? [];
+}
+
+/**
+ * Share your own timetable with all friends (updates their view of your classes).
+ * In a real app this would be a backend operation; here we store it locally
+ * as if the friend had shared it.
+ */
+export function shareMyTimetableWithFriend(friendId: string, myClasses: TimetableClass[]): void {
+  updateFriendTimetable(friendId, myClasses);
+}
+
 // --- Settings ---
 
 export function getSettings(): UserSettings {

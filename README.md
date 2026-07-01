@@ -21,13 +21,32 @@ Frontend (React + Vite)  →  API Gateway  →  Lambda (Node.js 20)  →  Dynamo
 | Integration | Status |
 |---|---|
 | AWS Cognito | ✅ Real user authentication (signup, login, email verification) |
-| AWS DynamoDB | ✅ UserProfiles, FriendRequests, Friendships tables |
-| AWS Lambda | ✅ 12 serverless functions for friends API |
+| AWS DynamoDB | ✅ UserProfiles, FriendRequests, Friendships, UserTimetables tables |
+| AWS Lambda | ✅ 14 serverless functions (friends API + timetable sync) |
 | AWS API Gateway | ✅ REST API with Cognito authorizer + CORS |
 | AWS SES | ⚠️ Configured but in sandbox mode (set EMAIL_ADAPTER=local) |
 | AWS CDK | ✅ Full Infrastructure as Code |
-| Workato → Google Calendar | ✅ Timetable classes sync to Google Calendar |
+| Google Calendar API | ✅ Direct OAuth2 integration (replaced Workato) — sync & pull events |
+| .ics Import | ✅ Upload school timetable files directly |
 | Workato → AWS SNS | ✅ Task deadline email notifications |
+
+## Timetable & Google Calendar
+
+### How it works
+- **Add classes** manually, via `.ics` file import, or by pulling from Google Calendar
+- **Sync to Google Calendar** — pushes your classes to your personal Google Calendar (OAuth2 popup)
+- **Friend timetable overlay** — Filter View lets you check friends' names to overlay their schedule on your grid
+- **Free slot detection** — green highlighted cells show times everyone selected is free
+- **Backend sync** — class changes auto-save to DynamoDB so friends see your latest timetable
+
+### Google Calendar Setup (already done)
+- OAuth Client ID created in Google Cloud Console
+- Authorized origin: `http://localhost:5173`
+- Calendar API enabled
+- Publishing status: Testing (teammates need to be added as test users)
+
+### Dev Bypass Mode
+Set `VITE_DEV_BYPASS_AUTH=true` in `.env` to skip Cognito login. Seed data (3 friends + 5 classes) auto-loads on first run.
 
 ## Quick Start
 
@@ -98,6 +117,8 @@ VITE_COGNITO_CLIENT_ID=djuh7mtqdl2hudmmdk1veigsq
 | GET | /friends | List active friends |
 | DELETE | /friends/{friendId} | Remove a friend |
 | GET | /friends/{userId}/relationship | Check relationship status |
+| PUT | /timetable | Save user's timetable classes to DynamoDB |
+| GET | /friends/{friendId}/timetable | Fetch a friend's timetable (must be friends) |
 
 All endpoints require `Authorization: Bearer {id_token}` (Cognito ID token).
 
@@ -108,12 +129,12 @@ SyncCircle/
 ├── apps/
 │   ├── frontend/          React + Vite + TailwindCSS
 │   │   └── src/app/
-│   │       ├── hooks/     useAuth, useFriends, useFriendRequests
-│   │       ├── pages/     Auth, Friends, Invitation, Dashboard, etc.
-│   │       └── lib/       api-client (authenticated fetch wrapper)
+│   │       ├── hooks/     useAuth, useFriends, useFriendRequests, useGoogleCalendar
+│   │       ├── pages/     Auth, Friends, Invitation, Dashboard, Timetable, etc.
+│   │       └── lib/       api-client, google-calendar, ics-parser, sgt, storage, seed-data
 │   └── backend/           AWS CDK + Lambda handlers
 │       ├── src/
-│       │   ├── handlers/  Lambda function handlers
+│       │   ├── handlers/  Lambda function handlers (friend-requests/, friends/, timetable/, triggers/)
 │       │   ├── services/  validation, token, email services
 │       │   ├── repositories/  DynamoDB data access layer
 │       │   └── utils/     response helpers, logger, canonical pair
@@ -125,24 +146,16 @@ SyncCircle/
 
 ## Team Handover — Next Features
 
-### 1. Timetable Friend Sync
+### 1. Timetable Friend Sync ✅ DONE
 
-The relationship query endpoint is ready: `GET /friends/{userId}/relationship`
+Backend built and wired into CDK. Needs `cdk deploy` to go live.
 
-Use `FriendshipAccessResult.isActiveFriend` to gate timetable sharing:
+- `PUT /timetable` — saves your classes to `UserTimetables` DynamoDB table
+- `GET /friends/{friendId}/timetable` — fetches a friend's timetable (checks friendship first)
+- Frontend auto-PUTs on every class change (when real auth is active)
+- Filter View fetches from API when toggling friends
 
-```typescript
-import { apiClient } from '../lib/api-client';
-import { API_PATHS, type FriendshipAccessResult } from '@synccircle/shared';
-
-// Check if user can see a friend's timetable
-const result = await apiClient.get<FriendshipAccessResult>(
-  `/friends/${targetUserId}/relationship`
-);
-if (result.isActiveFriend) {
-  // Show shared timetable
-}
-```
+**To deploy:** run `corepack pnpm exec cdk deploy --require-approval never` from `apps/backend` with AWS credentials configured.
 
 ### 2. AI Planner Friend Feature
 
