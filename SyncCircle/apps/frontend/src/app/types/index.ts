@@ -47,7 +47,10 @@ export interface TimetableClass {
 export interface Task {
   id: string;
   title: string;
-  dueDate?: string;        // ISO date string
+  dueDate?: string;        // ISO date string "YYYY-MM-DD"
+  dueTime?: string;        // optional time "HH:mm" (24h, SGT)
+                           // If set: in-app toast fires 30 min before dueTime on dueDate
+                           // If not set: in-app toast fires at 15:00 SGT on dueDate
   priority: 'High' | 'Medium' | 'Low';
   completed: boolean;
   completedAt?: string;

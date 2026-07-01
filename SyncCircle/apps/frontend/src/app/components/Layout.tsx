@@ -12,9 +12,12 @@ import {
   Bell,
   LogOut,
 } from "lucide-react";
-import { useEffect } from "react";
-import { motion } from "motion/react";
+import { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { useWorkato } from "../hooks/useWorkato";
+import { useTaskNotifications } from "../hooks/useTaskNotifications";
+import { getTasks } from "../lib/storage";
+import type { Task } from "../types";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: Home },
@@ -30,11 +33,35 @@ const navItems = [
 export function Layout() {
   const navigate = useNavigate();
   const { retryPendingSyncs } = useWorkato();
+  const { pendingCount, checkNow } = useTaskNotifications();
+  const [bellOpen, setBellOpen] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
+
+  // Close bell dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   // Retry any pending syncs from previous sessions on app load
   useEffect(() => {
     retryPendingSyncs();
   }, [retryPendingSyncs]);
+
+  // Get tasks due today/tomorrow for the bell panel
+  const upcomingTasks = (() => {
+    const tasks = getTasks();
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`;
+    return tasks.filter((t: Task) => !t.completed && t.dueDate && (t.dueDate === todayStr || t.dueDate === tomorrowStr));
+  })();
 
   const handleLogout = () => {
     localStorage.removeItem("synccircle_auth");
@@ -135,11 +162,96 @@ export function Layout() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Notifications */}
-            <button className="relative p-2 rounded-xl hover:bg-accent transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-secondary rounded-full"></span>
-            </button>
+            {/* Notifications bell + dropdown */}
+            <div className="relative" ref={bellRef}>
+              <button
+                onClick={() => setBellOpen(!bellOpen)}
+                className="relative p-2 rounded-xl hover:bg-accent transition-colors"
+                aria-label="Notifications"
+              >
+                <Bell className="w-5 h-5" />
+                {pendingCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {pendingCount > 9 ? '9+' : pendingCount}
+                  </span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {bellOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-12 w-80 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden"
+                  >
+                    {/* Header */}
+                    <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-primary" />
+                        <span className="font-semibold text-sm">Notifications</span>
+                      </div>
+                      <button
+                        onClick={() => { checkNow(); }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+
+                    {/* Task alerts */}
+                    <div className="max-h-72 overflow-y-auto">
+                      {upcomingTasks.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-muted-foreground">
+                          <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                          <p className="text-sm font-medium">All clear!</p>
+                          <p className="text-xs mt-1">No tasks due today or tomorrow.</p>
+                        </div>
+                      ) : (
+                        upcomingTasks.map((task: Task) => {
+                          const today = new Date();
+                          const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+                          const isToday = task.dueDate === todayStr;
+                          return (
+                            <div key={task.id} className={`px-4 py-3 border-b border-border/50 last:border-0 ${isToday ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}>
+                              <div className="flex items-start gap-3">
+                                <span className="text-lg mt-0.5">{isToday ? '⏰' : '📅'}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{task.title}</p>
+                                  <p className={`text-xs mt-0.5 ${isToday ? 'text-amber-600 font-medium' : 'text-muted-foreground'}`}>
+                                    {isToday
+                                      ? task.dueTime ? `Due today at ${task.dueTime} SGT` : 'Due today'
+                                      : task.dueTime ? `Due tomorrow at ${task.dueTime} SGT` : 'Due tomorrow'}
+                                  </p>
+                                  <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded-full mt-1 font-medium ${
+                                    task.priority === 'High' ? 'bg-red-100 text-red-600' :
+                                    task.priority === 'Medium' ? 'bg-amber-100 text-amber-600' :
+                                    'bg-green-100 text-green-600'
+                                  }`}>
+                                    {task.priority}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-4 py-2.5 border-t border-border bg-muted/30 text-center">
+                      <button
+                        onClick={() => { navigate('/timetable'); setBellOpen(false); }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        View all tasks →
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Avatar */}
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#b8a4d4] to-[#f4b8d0] flex items-center justify-center cursor-pointer hover:shadow-lg transition-shadow">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Calendar,
   ChevronLeft,
@@ -16,6 +16,7 @@ import {
   CalendarCheck,
   Loader2,
   XCircle,
+  AlertCircle,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import {
@@ -39,6 +40,7 @@ import { getClasses, saveClass, deleteClass } from "../lib/storage";
 import { getTasks, saveTask, deleteTask } from "../lib/storage";
 import { validateClassForm } from "../lib/validators";
 import { useWorkato } from "../hooks/useWorkato";
+import { fireDeadlineEmailIfTomorrow } from "../hooks/useTaskNotifications";
 import { postBulkSync } from "../lib/workato-client";
 import { sgtWeekStart, sgtWeekEnd, formatSGTDate, formatTime12h } from "../lib/sgt";
 import { toast } from "sonner";
@@ -151,6 +153,19 @@ function ClassCard({
   );
 }
 
+function getDueDateStatus(dueDateStr: string): 'overdue' | 'today' | 'tomorrow' | 'upcoming' | null {
+  if (!dueDateStr) return null;
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const todayMs = new Date(todayStr).getTime();
+  const dueMs = new Date(dueDateStr).getTime();
+  const diff = Math.round((dueMs - todayMs) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return 'overdue';
+  if (diff === 0) return 'today';
+  if (diff === 1) return 'tomorrow';
+  return 'upcoming';
+}
+
 function TaskItem({
   task,
   onToggle,
@@ -160,17 +175,28 @@ function TaskItem({
   onToggle: (task: Task) => void;
   onDelete: (id: string) => void;
 }) {
+  const dueDateStatus = task.dueDate && !task.completed ? getDueDateStatus(task.dueDate) : null;
+
+  const dueBadge = {
+    overdue: { label: 'Overdue', class: 'bg-red-100 text-red-600 border border-red-200' },
+    today:   { label: 'Due today', class: 'bg-orange-100 text-orange-600 border border-orange-200' },
+    tomorrow:{ label: 'Due tomorrow', class: 'bg-amber-100 text-amber-600 border border-amber-200' },
+    upcoming:{ label: null, class: '' },
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
       className={`flex items-center gap-3 p-4 rounded-xl border border-border bg-card transition-all hover:shadow-sm ${
-        task.completed ? "opacity-60" : ""
-      }`}
+        task.completed ? 'opacity-60' : ''
+      } ${dueDateStatus === 'overdue' ? 'border-red-200 bg-red-50/30' : ''}`}
     >
       <button
         onClick={() => onToggle(task)}
         className="flex-shrink-0 transition-colors"
+        aria-label={task.completed ? `Mark "${task.title}" as incomplete` : `Mark "${task.title}" as complete`}
       >
         {task.completed ? (
           <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -180,14 +206,21 @@ function TaskItem({
       </button>
 
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
+        <p className={`text-sm font-medium ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
           {task.title}
         </p>
-        <div className="flex items-center gap-3 mt-1">
+        <div className="flex items-center flex-wrap gap-2 mt-1">
           {task.dueDate && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="w-3 h-3" />
-              {new Date(task.dueDate).toLocaleDateString('en-SG', { timeZone: 'Asia/Singapore' })}
+              {new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-SG', {
+                day: 'numeric', month: 'short', year: 'numeric',
+              })}
+            </span>
+          )}
+          {dueDateStatus && dueDateStatus !== 'upcoming' && (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${dueBadge[dueDateStatus].class}`}>
+              {dueBadge[dueDateStatus].label}
             </span>
           )}
           <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${priorityBg[task.priority]} ${priorityColors[task.priority]}`}>
@@ -199,9 +232,10 @@ function TaskItem({
 
       <button
         onClick={() => onDelete(task.id)}
-        className="text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded"
+        className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+        aria-label={`Delete "${task.title}"`}
       >
-        Delete
+        <Trash2 className="w-4 h-4" />
       </button>
     </motion.div>
   );
@@ -210,6 +244,7 @@ function TaskItem({
 export function Timetable() {
   const [classes, setClasses] = useState<TimetableClass[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [activeTab, setActiveTab] = useState('calendar');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<TimetableClass | null>(null);
   const [formData, setFormData] = useState<ClassFormData>(EMPTY_FORM);
@@ -217,6 +252,14 @@ export function Timetable() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const { syncClass } = useWorkato();
+
+  // Task form state
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDueDate, setTaskDueDate] = useState('');
+  const [taskDueTime, setTaskDueTime] = useState('');
+  const [taskPriority, setTaskPriority] = useState<Task['priority']>('Medium');
+  const [taskFormError, setTaskFormError] = useState('');
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -344,6 +387,46 @@ export function Timetable() {
     setTasks(getTasks());
   };
 
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    setTaskFormError('');
+
+    if (!taskTitle.trim()) {
+      setTaskFormError('Task title is required');
+      return;
+    }
+
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      title: taskTitle.trim(),
+      dueDate: taskDueDate || undefined,
+      dueTime: (taskDueDate && taskDueTime) ? taskDueTime : undefined,
+      priority: taskPriority,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    saveTask(newTask);
+    setTasks(getTasks());
+
+    // Fire email immediately if due date is tomorrow
+    fireDeadlineEmailIfTomorrow(newTask);
+
+    // Reset form and close dialog
+    setTaskTitle('');
+    setTaskDueDate('');
+    setTaskDueTime('');
+    setTaskPriority('Medium');
+    setTaskFormError('');
+    setTaskDialogOpen(false);
+  };
+
+  // Get today's date string in YYYY-MM-DD for the min date on the date picker
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -357,76 +440,79 @@ export function Timetable() {
           <p className="text-muted-foreground">Manage your schedule and tasks</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button className="px-4 py-2 rounded-xl bg-card border border-border hover:bg-accent transition-all flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            Friend Availability
-          </button>
-          <button className="px-4 py-2 rounded-xl bg-card border border-border hover:bg-accent transition-all flex items-center gap-2">
-            <Filter className="w-4 h-4" />
-            Filters
-          </button>
-          <motion.button
-            onClick={handleSyncToGoogleCalendar}
-            disabled={isSyncing}
-            animate={{
-              backgroundColor:
-                syncStatus === 'success' ? '#16a34a' :
-                syncStatus === 'error'   ? '#dc2626' :
-                                           '#15803d',
-            }}
-            transition={{ duration: 0.3 }}
-            className="px-4 py-2 rounded-xl text-white disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
-          >
-            {isSyncing ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Syncing…
-              </>
-            ) : syncStatus === 'success' ? (
-              <motion.span
-                key="success"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                Synced!
-              </motion.span>
-            ) : syncStatus === 'error' ? (
-              <motion.span
-                key="error"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2"
-              >
-                <XCircle className="w-4 h-4" />
-                Sync Failed
-              </motion.span>
-            ) : (
-              <motion.span
-                key="idle"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2"
-              >
-                <CalendarCheck className="w-4 h-4" />
-                Sync to Google Calendar
-              </motion.span>
-            )}
-          </motion.button>
-          <button
-            onClick={openAddDialog}
-            className="px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:shadow-lg transition-all flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Class
-          </button>
-        </div>
+        {/* Calendar-only buttons — hidden when Tasks tab is active */}
+        {activeTab === 'calendar' && (
+          <div className="flex items-center gap-3">
+            <button className="px-4 py-2 rounded-xl bg-card border border-border hover:bg-accent transition-all flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Friend Availability
+            </button>
+            <button className="px-4 py-2 rounded-xl bg-card border border-border hover:bg-accent transition-all flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              Filters
+            </button>
+            <motion.button
+              onClick={handleSyncToGoogleCalendar}
+              disabled={isSyncing}
+              animate={{
+                backgroundColor:
+                  syncStatus === 'success' ? '#16a34a' :
+                  syncStatus === 'error'   ? '#dc2626' :
+                                             '#15803d',
+              }}
+              transition={{ duration: 0.3 }}
+              className="px-4 py-2 rounded-xl text-white disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
+            >
+              {isSyncing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Syncing…
+                </>
+              ) : syncStatus === 'success' ? (
+                <motion.span
+                  key="success"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Synced!
+                </motion.span>
+              ) : syncStatus === 'error' ? (
+                <motion.span
+                  key="error"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Sync Failed
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="idle"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2"
+                >
+                  <CalendarCheck className="w-4 h-4" />
+                  Sync to Google Calendar
+                </motion.span>
+              )}
+            </motion.button>
+            <button
+              onClick={openAddDialog}
+              className="px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:shadow-lg transition-all flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Class
+            </button>
+          </div>
+        )}
       </motion.div>
 
       {/* Tabs: Your Calendar / Your Tasks */}
-      <Tabs defaultValue="calendar" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="calendar" className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
@@ -538,55 +624,83 @@ export function Timetable() {
         {/* Tasks Tab */}
         <TabsContent value="tasks">
           <div className="space-y-6">
+            {/* Tasks Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Your Tasks</h3>
+                <p className="text-sm text-muted-foreground">
+                  {activeTasks.length} active
+                  {completedTasks.length > 0 && `, ${completedTasks.length} completed`}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setTaskTitle('');
+                  setTaskDueDate('');
+                  setTaskDueTime('');
+                  setTaskPriority('Medium');
+                  setTaskFormError('');
+                  setTaskDialogOpen(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground hover:shadow-lg transition-all flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Task
+              </button>
+            </div>
+
             {/* Active Tasks */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <Circle className="w-5 h-5 text-primary" />
-                Active Tasks
-                {activeTasks.length > 0 && (
-                  <span className="text-sm text-muted-foreground font-normal">
-                    ({activeTasks.length})
-                  </span>
-                )}
-              </h3>
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                <Circle className="w-4 h-4 text-primary" />
+                Active ({activeTasks.length})
+              </h4>
               {activeTasks.length > 0 ? (
                 <div className="space-y-2">
-                  {activeTasks.map((task) => (
-                    <TaskItem
-                      key={task.id}
-                      task={task}
-                      onToggle={handleToggleTask}
-                      onDelete={handleDeleteTask}
-                    />
-                  ))}
+                  <AnimatePresence>
+                    {activeTasks
+                      .sort((a, b) => {
+                        const order = { High: 0, Medium: 1, Low: 2 };
+                        const pd = order[a.priority] - order[b.priority];
+                        if (pd !== 0) return pd;
+                        if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+                        if (a.dueDate) return -1;
+                        if (b.dueDate) return 1;
+                        return 0;
+                      })
+                      .map((task) => (
+                        <TaskItem
+                          key={task.id}
+                          task={task}
+                          onToggle={handleToggleTask}
+                          onDelete={handleDeleteTask}
+                        />
+                      ))}
+                  </AnimatePresence>
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground bg-card rounded-2xl border border-border">
                   <CheckCircle2 className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">No active tasks. You're all caught up!</p>
+                  <p className="text-sm font-medium">No active tasks</p>
+                  <p className="text-xs mt-1">Click "Add Task" to get started</p>
                 </div>
               )}
             </motion.div>
 
             {/* Completed Tasks */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
-                Completed Tasks
-                {completedTasks.length > 0 && (
-                  <span className="text-sm text-muted-foreground font-normal">
-                    ({completedTasks.length})
-                  </span>
-                )}
-              </h3>
-              {completedTasks.length > 0 ? (
+            {completedTasks.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  Completed ({completedTasks.length})
+                </h4>
                 <div className="space-y-2">
                   {completedTasks.map((task) => (
                     <TaskItem
@@ -597,12 +711,8 @@ export function Timetable() {
                     />
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground bg-card rounded-2xl border border-border">
-                  <p className="text-sm">No completed tasks yet.</p>
-                </div>
-              )}
-            </motion.div>
+              </motion.div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
@@ -768,6 +878,134 @@ export function Timetable() {
               </button>
             </div>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Task Dialog */}
+      <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Task</DialogTitle>
+            <DialogDescription>
+              Fill in the details below. A deadline reminder email will be sent 1 day before the due date.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleAddTask} className="space-y-4 py-2">
+            {/* Title */}
+            <div className="space-y-2">
+              <Label htmlFor="task-title-input">
+                Title <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="task-title-input"
+                placeholder="What do you need to do?"
+                value={taskTitle}
+                onChange={(e) => {
+                  setTaskTitle(e.target.value);
+                  if (taskFormError) setTaskFormError('');
+                }}
+                autoFocus
+                aria-invalid={!!taskFormError}
+              />
+              {taskFormError && (
+                <p className="text-sm text-destructive flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {taskFormError}
+                </p>
+              )}
+            </div>
+
+            {/* Due Date + Time */}
+            <div className="space-y-2">
+              <Label htmlFor="task-due-date-input">
+                Due Date
+                <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+              </Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <input
+                  id="task-due-date-input"
+                  type="date"
+                  value={taskDueDate}
+                  min={todayStr}
+                  onChange={(e) => { setTaskDueDate(e.target.value); if (!e.target.value) setTaskDueTime(''); }}
+                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Due Time — only shown when a date is chosen */}
+            {taskDueDate && (
+              <div className="space-y-2">
+                <Label htmlFor="task-due-time-input">
+                  Due Time
+                  <span className="text-muted-foreground font-normal ml-1">(optional — SGT)</span>
+                </Label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    id="task-due-time-input"
+                    type="time"
+                    value={taskDueTime}
+                    onChange={(e) => setTaskDueTime(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {taskDueTime
+                    ? `⏰ In-app reminder 30 min before ${taskDueTime} SGT. Email sent 1 day before.`
+                    : `⏰ No time set — in-app reminder at 3:00 PM SGT. Email sent 1 day before.`}
+                </p>
+              </div>
+            )}
+
+            {/* Priority */}
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['High', 'Medium', 'Low'] as Task['priority'][]).map((p) => {
+                  const styles = {
+                    High: { active: 'bg-red-100 border-red-400 text-red-700', dot: 'bg-red-400' },
+                    Medium: { active: 'bg-amber-100 border-amber-400 text-amber-700', dot: 'bg-amber-400' },
+                    Low: { active: 'bg-green-100 border-green-400 text-green-700', dot: 'bg-green-400' },
+                  };
+                  const isSelected = taskPriority === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setTaskPriority(p)}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
+                        isSelected
+                          ? styles[p].active
+                          : 'border-border hover:border-muted-foreground/40'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${styles[p].dot}`} />
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <button
+                type="button"
+                onClick={() => setTaskDialogOpen(false)}
+                className="px-4 py-2 rounded-xl text-sm bg-card border border-border hover:bg-accent transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-xl text-sm bg-primary text-primary-foreground hover:shadow-lg transition-all"
+              >
+                Create Task
+              </button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

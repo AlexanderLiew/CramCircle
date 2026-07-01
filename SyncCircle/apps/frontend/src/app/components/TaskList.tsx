@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Check, Trash2, Calendar, Flag, ChevronDown, ChevronUp } from 'lucide-react';
 import { getTasks, saveTask, deleteTask } from '../lib/storage';
 import { validateTaskForm } from '../lib/validators';
+import { fireDeadlineEmailIfTomorrow } from '../hooks/useTaskNotifications';
 import type { Task } from '../types';
 
 const PRIORITY_ORDER: Record<Task['priority'], number> = {
@@ -49,6 +50,7 @@ export function TaskList() {
   // Form state
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('');
   const [priority, setPriority] = useState<Task['priority']>('Medium');
   const [formError, setFormError] = useState('');
 
@@ -74,6 +76,7 @@ export function TaskList() {
       id: crypto.randomUUID(),
       title: title.trim(),
       dueDate: dueDate || undefined,
+      dueTime: (dueDate && dueTime) ? dueTime : undefined,
       priority,
       completed: false,
       createdAt: new Date().toISOString(),
@@ -82,9 +85,13 @@ export function TaskList() {
     saveTask(newTask);
     setTasks(getTasks());
 
+    // Fire email immediately if due date is tomorrow
+    fireDeadlineEmailIfTomorrow(newTask);
+
     // Reset form
     setTitle('');
     setDueDate('');
+    setDueTime('');
     setPriority('Medium');
     setShowForm(false);
   };
@@ -162,7 +169,7 @@ export function TaskList() {
                     id="task-due-date"
                     type="date"
                     value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
+                    onChange={(e) => { setDueDate(e.target.value); if (!e.target.value) setDueTime(''); }}
                     className="w-full px-4 py-2.5 rounded-xl bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
@@ -183,6 +190,27 @@ export function TaskList() {
                   </select>
                 </div>
               </div>
+
+              {/* Due time — only when date is set */}
+              {dueDate && (
+                <div>
+                  <label htmlFor="task-due-time" className="block text-sm font-medium mb-1.5">
+                    Due Time <span className="text-muted-foreground">(optional — SGT)</span>
+                  </label>
+                  <input
+                    id="task-due-time"
+                    type="time"
+                    value={dueTime}
+                    onChange={(e) => setDueTime(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {dueTime
+                      ? `⏰ In-app reminder 30 min before ${dueTime} SGT. Email sent 1 day before.`
+                      : `⏰ No time — in-app reminder at 3:00 PM SGT. Email sent 1 day before.`}
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center gap-3 pt-2">
                 <button
@@ -244,7 +272,10 @@ export function TaskList() {
                   {task.dueDate && (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Calendar className="w-3 h-3" />
-                      {new Date(task.dueDate).toLocaleDateString()}
+                      {new Date(task.dueDate + 'T00:00:00').toLocaleDateString()}
+                      {task.dueTime && (
+                        <span className="ml-0.5">at {task.dueTime}</span>
+                      )}
                     </span>
                   )}
                   <span

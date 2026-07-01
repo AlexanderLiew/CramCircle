@@ -6,13 +6,20 @@ import { sgtDateForDayThisWeek } from './sgt';
 // ============================================================
 
 /**
- * Base webhook URL for Workato recipes.
+ * Workato webhook URL for Google Calendar / Notes sync.
  * Configured via VITE_WORKATO_WEBHOOK_URL environment variable.
- * Falls back to a placeholder for local development.
  */
 export const WORKATO_WEBHOOK_URL: string =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WORKATO_WEBHOOK_URL) ||
   'https://webhooks.trial.workato.com/webhooks/rest/a6158446-0e94-4d56-805f-a9b744af435e/synccircle-google-calendar';
+
+/**
+ * Workato webhook URL specifically for task deadline email alerts → AWS SNS.
+ * Configured via VITE_WORKATO_TASK_WEBHOOK_URL environment variable.
+ */
+export const WORKATO_TASK_WEBHOOK_URL: string =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WORKATO_TASK_WEBHOOK_URL) ||
+  'https://webhooks.trial.workato.com/webhooks/rest/a6158446-0e94-4d56-805f-a9b744af435e/synccircledeadline';
 
 /**
  * localStorage key for storing failed syncs that should be retried on next load.
@@ -23,15 +30,76 @@ export const PENDING_SYNCS_KEY = 'synccircle_pending_syncs';
 
 export type SyncAction = 'create' | 'update' | 'delete';
 
-export type SyncType = 'class' | 'note' | 'calendar-connect' | 'calendar-disconnect' | 'notes-connect';
+export type SyncType =
+  | 'class'
+  | 'note'
+  | 'calendar-connect'
+  | 'calendar-disconnect'
+  | 'notes-connect'
+  | 'task-deadline-alert';
 
 export interface PendingSync {
   id: string;
   type: SyncType;
-  action: SyncAction | 'connect' | 'disconnect';
+  action: SyncAction | 'connect' | 'disconnect' | 'notify';
   payload: unknown;
   createdAt: string;
 }
+
+// --- Task Deadline Alert ---
+
+export interface TaskDeadlineAlertPayload {
+  event: 'task-deadline-alert';
+  task: {
+    id: string;
+    title: string;
+    dueDate: string;       // ISO date string e.g. "2026-07-02"
+    priority: string;      // 'High' | 'Medium' | 'Low'
+  };
+  recipient: {
+    email: string;
+    displayName: string;
+  };
+  daysUntilDue: number;    // always 1 for the current threshold
+  notifiedAt: string;      // ISO timestamp of when the notification was fired
+}
+
+/**
+ * Builds the payload sent to Workato when a task deadline is 1 day away.
+ * Workato receives this, then calls AWS SNS to send the email.
+ */
+export function buildTaskDeadlineAlertPayload(
+  taskId: string,
+  taskTitle: string,
+  taskDueDate: string,
+  taskPriority: string,
+  recipientEmail: string,
+  recipientName: string,
+  daysUntilDue: number
+): TaskDeadlineAlertPayload {
+  return {
+    event: 'task-deadline-alert',
+    task: {
+      id: taskId,
+      title: taskTitle,
+      dueDate: taskDueDate,
+      priority: taskPriority,
+    },
+    recipient: {
+      email: recipientEmail,
+      displayName: recipientName,
+    },
+    daysUntilDue,
+    notifiedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * localStorage key for tracking which task IDs have already had a
+ * deadline notification sent, so we don't spam on every page load.
+ * Stored as a JSON array of strings: ["taskId1", "taskId2", ...]
+ */
+export const NOTIFIED_TASKS_KEY = 'synccircle_notified_tasks';
 
 // --- Google Calendar Field Mapping ---
 
