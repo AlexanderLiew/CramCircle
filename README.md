@@ -29,7 +29,7 @@ Open `http://localhost:5173`
 | `main` | Stable base |
 | `alex-frontend-fixes` | Initial frontend fixes |
 | `workato-google-calendar-sync` | Google Calendar integration |
-| `workato-amazon-sns` | Task deadline email via AWS SNS ← current |
+| `aest-workato` | Task deadline email via AWS SNS ← current |
 
 ## Project Docs
 

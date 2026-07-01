@@ -4,7 +4,7 @@ SyncCircle is a hackathon web app workspace for a student collaboration app. The
 
 ## Branch Info
 
-This branch (`workato-amazon-sns`) is a continuation of `workato-google-calendar-sync`.
+This branch (`aest-workato`) is a continuation of `workato-google-calendar-sync`.
 
 Changes introduced in this branch:
 - Task deadline email notifications via **Workato → AWS SNS**
